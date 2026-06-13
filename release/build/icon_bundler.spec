@@ -2,6 +2,7 @@
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.building.osx import BUNDLE
 
 
 block_cipher = None
@@ -29,7 +30,7 @@ a = Analysis(
     optimize=0,
 )
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure, a.zipped_data)
 
 exe = EXE(
     pyz,
@@ -57,4 +58,11 @@ coll = COLLECT(
     upx=True,
     upx_exclude=[],
     name="IconBundler",
+)
+
+app = BUNDLE(
+    coll,
+    name="IconBundler.app",
+    icon=None,
+    bundle_identifier="com.iconbundler.app",
 )

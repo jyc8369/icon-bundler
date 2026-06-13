@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 from tkinter import filedialog, messagebox
@@ -12,10 +15,14 @@ except ImportError as exc:
         "Missing dependencies. Install them with `pip install -r requirements.txt`."
     ) from exc
 
+from i18n import DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES, get_text
+
 
 TARGET_SIZES = [(16, 16), (32, 32), (48, 48), (256, 256)]
 MAX_ICON_SIZE = 256
 SUPPORTED_EXTENSIONS = {".png", ".jpg", ".jpeg"}
+LANG_ENV = "ICON_BUNDLER_LANGUAGE"
+SOURCE_ENV = "ICON_BUNDLER_SOURCE"
 
 try:
     RESAMPLE_LANCZOS = Image.Resampling.LANCZOS
@@ -55,17 +62,18 @@ def convert_image_to_ico(source_path: Path) -> Path:
 
 
 class IconBundlerApp(ctk.CTk):
-    def __init__(self) -> None:
+    def __init__(self, initial_language: str = DEFAULT_LANGUAGE, initial_source: str | None = None) -> None:
         super().__init__()
 
-        self.title("Icon Bundler")
-        self.geometry("640x360")
-        self.minsize(640, 360)
+        self.language = ctk.StringVar(value=initial_language if initial_language in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE)
+        self.title(get_text(self.language.get(), "app_title"))
+        self.geometry("640x640")
+        self.minsize(640, 640)
 
-        self.source_path: Path | None = None
-        self.source_var = ctk.StringVar(value="파일이 선택되지 않았습니다.")
-        self.output_var = ctk.StringVar(value="출력 경로가 없습니다.")
-        self.status_var = ctk.StringVar(value="PNG 또는 JPG 파일을 선택하세요.")
+        self.source_path: Path | None = Path(initial_source) if initial_source else None
+        self.source_var = ctk.StringVar(value=get_text(self.language.get(), "source_placeholder"))
+        self.output_var = ctk.StringVar(value=get_text(self.language.get(), "output_placeholder"))
+        self.status_var = ctk.StringVar(value=get_text(self.language.get(), "status_idle"))
 
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(1, weight=1)
@@ -73,25 +81,36 @@ class IconBundlerApp(ctk.CTk):
         self._build_header()
         self._build_body()
         self._build_footer()
+        self._sync_source_display()
 
     def _build_header(self) -> None:
         header = ctk.CTkFrame(self, corner_radius=18)
         header.grid(row=0, column=0, padx=18, pady=(18, 10), sticky="ew")
         header.grid_columnconfigure(0, weight=1)
+        header.grid_columnconfigure(1, weight=0)
 
         title = ctk.CTkLabel(
             header,
-            text="PNG / JPG to ICO",
+            text=get_text(self.language.get(), "header_title"),
             font=ctk.CTkFont(size=22, weight="bold"),
         )
         title.grid(row=0, column=0, padx=20, pady=(18, 4), sticky="w")
 
         subtitle = ctk.CTkLabel(
             header,
-            text="16, 32, 48, 256 해상도를 하나의 .ico 파일로 저장합니다.",
+            text=get_text(self.language.get(), "header_subtitle"),
             text_color="#8a8f98",
         )
         subtitle.grid(row=1, column=0, padx=20, pady=(0, 16), sticky="w")
+
+        language_menu = ctk.CTkOptionMenu(
+            header,
+            values=list(SUPPORTED_LANGUAGES),
+            variable=self.language,
+            command=self.change_language,
+            width=100,
+        )
+        language_menu.grid(row=0, column=1, padx=20, pady=(20, 4), sticky="e")
 
     def _build_body(self) -> None:
         body = ctk.CTkFrame(self, corner_radius=18)
@@ -100,7 +119,7 @@ class IconBundlerApp(ctk.CTk):
 
         select_button = ctk.CTkButton(
             body,
-            text="원본 이미지 선택",
+            text=get_text(self.language.get(), "select_source"),
             command=self.select_source_file,
             width=160,
         )
@@ -108,13 +127,13 @@ class IconBundlerApp(ctk.CTk):
 
         convert_button = ctk.CTkButton(
             body,
-            text="ICO 변환",
+            text=get_text(self.language.get(), "convert"),
             command=self.convert_clicked,
             width=120,
         )
         convert_button.grid(row=0, column=1, padx=20, pady=(20, 12), sticky="e")
 
-        source_label = ctk.CTkLabel(body, text="원본 파일")
+        source_label = ctk.CTkLabel(body, text=get_text(self.language.get(), "source_label"))
         source_label.grid(row=1, column=0, padx=20, pady=(10, 4), sticky="w")
 
         source_value = ctk.CTkLabel(
@@ -126,7 +145,7 @@ class IconBundlerApp(ctk.CTk):
         )
         source_value.grid(row=2, column=0, columnspan=2, padx=20, pady=(0, 10), sticky="ew")
 
-        output_label = ctk.CTkLabel(body, text="출력 파일")
+        output_label = ctk.CTkLabel(body, text=get_text(self.language.get(), "output_label"))
         output_label.grid(row=3, column=0, padx=20, pady=(10, 4), sticky="w")
 
         output_value = ctk.CTkLabel(
@@ -140,7 +159,7 @@ class IconBundlerApp(ctk.CTk):
 
         info = ctk.CTkLabel(
             body,
-            text="출력 파일명은 원본과 같은 폴더의 동일한 이름(.ico)으로 생성됩니다.",
+            text=get_text(self.language.get(), "info"),
             text_color="#8a8f98",
             wraplength=560,
             justify="left",
@@ -163,11 +182,11 @@ class IconBundlerApp(ctk.CTk):
 
     def select_source_file(self) -> None:
         file_path = filedialog.askopenfilename(
-            title="원본 이미지 선택",
+            title=get_text(self.language.get(), "file_dialog_title"),
             filetypes=[
-                ("Image files", "*.png *.jpg *.jpeg"),
-                ("PNG files", "*.png"),
-                ("JPG files", "*.jpg *.jpeg"),
+                (get_text(self.language.get(), "file_dialog_image"), "*.png *.jpg *.jpeg"),
+                (get_text(self.language.get(), "file_dialog_png"), "*.png"),
+                (get_text(self.language.get(), "file_dialog_jpg"), "*.jpg *.jpeg"),
             ],
         )
         if not file_path:
@@ -175,45 +194,89 @@ class IconBundlerApp(ctk.CTk):
 
         source = Path(file_path)
         if source.suffix.lower() not in SUPPORTED_EXTENSIONS:
-            messagebox.showerror("형식 오류", "PNG, JPG, JPEG 파일만 선택할 수 있습니다.")
+            messagebox.showerror(
+                get_text(self.language.get(), "file_dialog_error_title"),
+                get_text(self.language.get(), "file_dialog_error_body"),
+            )
             return
 
         self.source_path = source
         self.source_var.set(str(source))
         self.output_var.set(str(source.with_suffix(".ico")))
-        self.status_var.set("선택한 파일을 변환할 준비가 되었습니다.")
+        self.status_var.set(get_text(self.language.get(), "status_idle"))
 
     def convert_clicked(self) -> None:
         if self.source_path is None:
-            messagebox.showwarning("파일 필요", "먼저 원본 이미지를 선택하세요.")
+            messagebox.showwarning(
+                get_text(self.language.get(), "warning_title"),
+                get_text(self.language.get(), "warning_body"),
+            )
             return
 
         output_path = self.source_path.with_suffix(".ico")
         if output_path.exists():
             overwrite = messagebox.askyesno(
-                "덮어쓰기 확인",
-                f"이미 같은 이름의 파일이 있습니다.\n\n{output_path}\n\n덮어쓰시겠습니까?",
+                get_text(self.language.get(), "overwrite_title"),
+                get_text(self.language.get(), "overwrite_body").format(path=output_path),
             )
             if not overwrite:
-                self.status_var.set("기존 파일 덮어쓰기를 취소했습니다.")
+                self.status_var.set(get_text(self.language.get(), "overwrite_cancel"))
                 return
 
         try:
             result = convert_image_to_ico(self.source_path)
         except Exception as exc:
-            messagebox.showerror("변환 실패", str(exc))
-            self.status_var.set("변환에 실패했습니다.")
+            messagebox.showerror(
+                get_text(self.language.get(), "convert_error_title"),
+                str(exc) or get_text(self.language.get(), "convert_error_body"),
+            )
+            self.status_var.set(get_text(self.language.get(), "convert_error_body"))
             return
 
         self.output_var.set(str(result))
-        self.status_var.set(f"변환 완료: {result}")
-        messagebox.showinfo("완료", f"ICO 파일을 생성했습니다.\n\n{result}")
+        self.status_var.set(get_text(self.language.get(), "success_status").format(path=result))
+        messagebox.showinfo(
+            get_text(self.language.get(), "convert_done_title"),
+            get_text(self.language.get(), "convert_done_body").format(path=result),
+        )
+
+    def change_language(self, language: str) -> None:
+        if language not in SUPPORTED_LANGUAGES:
+            self.language.set(DEFAULT_LANGUAGE)
+            language = DEFAULT_LANGUAGE
+
+        current_language = self.language.get()
+        if language == current_language:
+            return
+
+        self._restart_with_language(language)
+
+    def _sync_source_display(self) -> None:
+        if self.source_path is None:
+            self.source_var.set(get_text(self.language.get(), "source_placeholder"))
+            self.output_var.set(get_text(self.language.get(), "output_placeholder"))
+        else:
+            self.source_var.set(str(self.source_path))
+            self.output_var.set(str(self.source_path.with_suffix(".ico")))
+
+    def _restart_with_language(self, language: str) -> None:
+        env = os.environ.copy()
+        env[LANG_ENV] = language
+        if self.source_path is not None:
+            env[SOURCE_ENV] = str(self.source_path)
+        else:
+            env.pop(SOURCE_ENV, None)
+
+        subprocess.Popen([sys.executable, *sys.argv], env=env)
+        self.destroy()
 
 
 def main() -> None:
     ctk.set_appearance_mode("system")
     ctk.set_default_color_theme("blue")
-    app = IconBundlerApp()
+    initial_language = os.environ.get(LANG_ENV, DEFAULT_LANGUAGE)
+    initial_source = os.environ.get(SOURCE_ENV)
+    app = IconBundlerApp(initial_language=initial_language, initial_source=initial_source)
     app.mainloop()
 
 
