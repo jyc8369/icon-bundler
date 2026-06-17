@@ -8,8 +8,8 @@ SUPPORTED_LANGUAGES = ("en", "ko")
 TEXTS = {
     "en": {
         "app_title": "Icon Bundler",
-        "header_title": "PNG / JPG to ICO",
-        "header_subtitle": "Save 16, 32, 48, and 256 sizes into one .ico file.",
+        "header_title": "PNG / JPG to Icon",
+        "header_subtitle": "Save PNG or JPG images as multi-size .ico or .icns files.",
         "select_source": "Select Source Image",
         "convert_ico": "Convert to ICO",
         "convert_icns": "Convert to ICNS",
@@ -33,14 +33,15 @@ TEXTS = {
         "convert_error_title": "Conversion Failed",
         "convert_error_body": "Conversion failed.",
         "convert_done_title": "Done",
-        "convert_done_body": "ICO file created.\n\n{path}",
+        "convert_done_body": "{format} file created.\n\n{path}",
         "success_status": "Conversion completed: {path}",
         "invalid_image": "PNG, JPG, and JPEG files only.",
+        "missing_source": "Source image does not exist: {path}",
     },
     "ko": {
         "app_title": "Icon Bundler",
-        "header_title": "PNG / JPG to ICO",
-        "header_subtitle": "16, 32, 48, 256 해상도를 하나의 .ico 파일로 저장합니다.",
+        "header_title": "PNG / JPG 아이콘 변환",
+        "header_subtitle": "PNG 또는 JPG 이미지를 다중 해상도 .ico 또는 .icns 파일로 저장합니다.",
         "select_source": "원본 이미지 선택",
         "convert_ico": "ICO 변환",
         "convert_icns": "ICNS 변환",
@@ -64,9 +65,10 @@ TEXTS = {
         "convert_error_title": "변환 실패",
         "convert_error_body": "변환에 실패했습니다.",
         "convert_done_title": "완료",
-        "convert_done_body": "ICO 파일을 생성했습니다.\n\n{path}",
+        "convert_done_body": "{format} 파일을 생성했습니다.\n\n{path}",
         "success_status": "변환 완료: {path}",
         "invalid_image": "PNG, JPG, JPEG 파일만 지원합니다.",
+        "missing_source": "원본 이미지가 존재하지 않습니다: {path}",
     },
 }
 
