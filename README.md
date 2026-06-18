@@ -23,14 +23,14 @@ You do not need to build anything yourself.
 5. Select a `PNG`, `JPG`, or `JPEG` image.
 6. Click either `Convert to ICO` or `Convert to ICNS`.
 
-The output file is saved next to the source image with the same name and the matching extension.
+The output file is saved next to the source image with the same name and the matching extension. After selecting a source image, the app shows both ICO and ICNS output path candidates so you can confirm either destination before converting.
 
 ## What the app does
 
 - The source image is selected with a file picker
 - Language can be switched between `en` and `ko`
 - The first launch default language is `en`
-- Changing the language restarts the app so the new language is applied cleanly
+- Changing the language updates the current window immediately
 - The app icon is included in the packaged release
 
 ## Export details
@@ -50,6 +50,7 @@ ICNS export uses these sizes, stopping before the first size larger than the sou
 - `128x128`
 - `256x256`
 - `512x512`
+- `1024x1024`
 
 ## Supported files
 
